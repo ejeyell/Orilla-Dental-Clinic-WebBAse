@@ -1,0 +1,7 @@
+# Environment files can contain private credentials.
+.env
+.env.*
+!.env.example
+importance/.env
+importance/.env.*
+!importance/.env.example
