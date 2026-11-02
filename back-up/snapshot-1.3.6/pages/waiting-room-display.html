@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#071824" />
+    <title>Now Calling | Orilla Dental Clinic</title>
+    <link rel="stylesheet" href="../styles/waiting-room.css" />
+  </head>
+  <body>
+    <main class="display-board">
+      <header class="display-header">
+        <div class="display-brand">
+          <img src="../asset/image/icon/dental-icon.png" alt="" />
+          <div><strong>ORILLA DENTAL CLINIC</strong><span>PLEASE WAIT FOR YOUR NAME</span></div>
+        </div>
+        <div class="display-date" id="display-date"></div>
+      </header>
+
+      <section class="calling-panel" aria-live="polite" aria-atomic="true">
+        <p class="display-label"><span class="pulse-dot" aria-hidden="true"></span> NOW CALLING</p>
+        <h1 id="display-current-name">Please wait</h1>
+        <p class="display-prompt" id="display-current-prompt">Our staff will call you shortly.</p>
+      </section>
+
+      <section class="next-panel" aria-live="polite" aria-atomic="true">
+        <div class="next-icon" aria-hidden="true">→</div>
+        <div><p class="display-label">NEXT TO BE CALLED</p><h2 id="display-next-name">Please wait for your name</h2></div>
+        <span class="next-number" id="display-next-number"></span>
+      </section>
+
+      <footer class="display-footer">
+        <p>Please proceed to the reception area when your name is called.</p>
+        <button id="fullscreen-button" type="button">Full screen ⛶</button>
+      </footer>
+    </main>
+
+    <script>
+      const appointmentStorageKey = "orilla-dental-appointments-v1";
+      const displayStateKey = "orilla-dental-waiting-room-v1";
+      const today = new Date();
+      const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      document.querySelector("#display-date").textContent = new Intl.DateTimeFormat(undefined, {
+        weekday: "long", month: "long", day: "numeric",
+      }).format(today);
+
+      function readStored(key, fallback) {
+        try {
+          const value = JSON.parse(localStorage.getItem(key) || "null");
+          return value ?? fallback;
+        } catch (error) {
+          console.error(`Could not read ${key}:`, error);
+          return fallback;
+        }
+      }
+
+      function renderBoard() {
+        const appointments = readStored(appointmentStorageKey, []);
+        const state = readStored(displayStateKey, { date: todayString, currentId: null, calledIds: [] });
+        const queue = Array.isArray(appointments) ? appointments.filter((item) =>
+          item && item.id && item.date === todayString && !item.done && !item.notHere &&
+          (!item.requested || item.requestStatus === "confirmed")
+        ) : [];
+        const current = state.date === todayString ? queue.find((item) => item.id === state.currentId) : null;
+        const calledIds = new Set(state.date === todayString && Array.isArray(state.calledIds) ? state.calledIds : []);
+        const next = queue.find((item) => !calledIds.has(item.id));
+        document.querySelector("#display-current-name").textContent = current ? current.name : "Please wait";
+        document.querySelector("#display-current-prompt").textContent = current
+          ? "Please proceed to the reception area."
+          : "Our staff will call you shortly.";
+        document.querySelector("#display-next-name").textContent = next ? next.name : "Please wait for your name";
+        document.querySelector("#display-next-number").textContent = next ? "UP NEXT" : "";
+      }
+
+      window.addEventListener("storage", (event) => {
+        if (event.key === appointmentStorageKey || event.key === displayStateKey) renderBoard();
+      });
+      window.addEventListener("focus", renderBoard);
+      renderBoard();
+
+      document.querySelector("#fullscreen-button").addEventListener("click", async () => {
+        try {
+          if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+          else await document.exitFullscreen();
+        } catch (error) {
+          console.warn("Fullscreen mode is unavailable:", error);
+        }
+      });
+      document.addEventListener("fullscreenchange", () => {
+        document.querySelector("#fullscreen-button").textContent = document.fullscreenElement ? "Exit full screen" : "Full screen ⛶";
+      });
+    </script>
+  </body>
+</html>

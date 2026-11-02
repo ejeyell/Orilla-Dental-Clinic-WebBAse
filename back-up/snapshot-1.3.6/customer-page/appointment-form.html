@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Appointment Request Form | Orilla Dental Clinic</title>
+    <link rel="stylesheet" href="customer.css" />
+  </head>
+  <body class="request-form-page">
+    <form class="request-form" id="appointment-request-form">
+      <label for="patient-name">Full name</label>
+      <input id="patient-name" name="name" type="text" autocomplete="name" maxlength="100" required />
+
+      <label for="patient-contact">Phone number</label>
+      <input id="patient-contact" name="contact" type="tel" autocomplete="tel" maxlength="30" required />
+
+      <label for="visit-reason">Reason for visit</label>
+      <input id="visit-reason" name="reason" type="text" maxlength="100" placeholder="e.g. Check up, cleaning, toothache" required />
+
+      <div class="request-form-row">
+        <div>
+          <label for="requested-date">Preferred date</label>
+          <input id="requested-date" name="date" type="date" required />
+        </div>
+        <div>
+          <label for="requested-time">Preferred time</label>
+          <input id="requested-time" name="time" type="time" required />
+        </div>
+      </div>
+
+      <p class="request-form-note">Your appointment is a request until our clinic team confirms the date and time.</p>
+      <p class="request-form-message" id="request-message" role="status" aria-live="polite" hidden></p>
+      <button class="request-submit" type="submit">Send appointment request</button>
+    </form>
+
+    <script>
+      const appointmentStorageKey = "orilla-dental-appointments-v1";
+      const requestForm = document.querySelector("#appointment-request-form");
+      const requestMessage = document.querySelector("#request-message");
+      const requestedDate = document.querySelector("#requested-date");
+      const today = new Date();
+      requestedDate.min = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+      requestForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const fields = new FormData(requestForm);
+        const request = {
+          id: globalThis.crypto?.randomUUID?.() || `request-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          name: String(fields.get("name")).trim(),
+          contact: String(fields.get("contact")).trim(),
+          reason: String(fields.get("reason")).trim(),
+          date: String(fields.get("date")),
+          time: String(fields.get("time")),
+          done: false,
+          notHere: false,
+          requested: true,
+          requestStatus: "pending",
+          submittedAt: new Date().toISOString()
+        };
+
+        try {
+          const saved = JSON.parse(localStorage.getItem(appointmentStorageKey) || "[]");
+          if (!Array.isArray(saved)) throw new Error("Saved appointments are not a list.");
+          saved.push(request);
+          localStorage.setItem(appointmentStorageKey, JSON.stringify(saved));
+          requestMessage.textContent = "Your request was saved. Our clinic team will contact you to confirm your appointment.";
+          requestMessage.hidden = false;
+          requestMessage.classList.remove("is-error");
+          requestMessage.classList.add("is-success");
+          requestForm.reset();
+        } catch (error) {
+          console.error("Could not save the appointment request:", error);
+          requestMessage.textContent = "We could not save your request in this browser. Please contact the clinic directly.";
+          requestMessage.hidden = false;
+          requestMessage.classList.remove("is-success");
+          requestMessage.classList.add("is-error");
+        }
+      });
+    </script>
+  </body>
+</html>

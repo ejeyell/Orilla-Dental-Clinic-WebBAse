@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Price Offer | Orilla Dental Clinic</title>
+    <script src="../scripts/auth.js"></script>
+    <link rel="stylesheet" href="../styles/styles.css" />
+    <script src="../scripts/nav-state.js" defer></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <div class="dashboard">
+        <aside class="sidebar">
+          <div class="brand-block">
+            <img class="brand-mark" src="../asset/image/icon/dental-icon.png" alt="" />
+            <div class="brand-name">
+              <span class="brand-text">ORILLA DENTAL</span>
+              <span class="brand-sub">CLINIC</span>
+            </div>
+            <div class="doctor-name">Dr. Raul A. Orilla</div>
+          </div>
+
+          <nav class="nav-menu" aria-label="Sidebar navigation">
+            <details class="nav-group">
+              <summary class="nav-group-title">Appointments</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="index.html">Today's Appointments</a>
+                <a class="nav-item" href="all-appointments.html">All Appointments</a>
+                <a class="nav-item request-nav-item" href="requests.html">Online Requests <span class="nav-count" data-pending-request-count hidden>0</span></a>
+              </div>
+            </details>
+            <details class="nav-group" open>
+              <summary class="nav-group-title">Clinic Management</summary>
+              <div class="nav-group-items">
+                <a class="nav-item active" href="price-offer.html" aria-current="page">Price Offer</a>
+                <a class="nav-item" href="loan-customers.html">Loan Customer</a>
+                <a class="nav-item" href="history.html">History</a>
+              </div>
+            </details>
+            <details class="nav-group">
+              <summary class="nav-group-title">System</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="controls.html">Controls</a>
+                <a class="nav-item" href="settings.html">Settings</a>
+              </div>
+            </details>
+            <div class="nav-footer"><button class="nav-item logout-nav" type="button" data-logout>Log out</button></div>
+          </nav>
+          <div class="sidebar-spacer" aria-hidden="true"></div>
+        </aside>
+
+        <main class="main-panel price-main">
+          <header class="all-appointments-header">
+            <div>
+              <h1>Price Offer</h1>
+              <p>Manage the clinic's services and prices</p>
+            </div>
+            <button class="primary-btn" id="edit-prices" type="button">Edit prices</button>
+          </header>
+
+          <section class="price-content">
+            <p class="price-notice">Set prices that reflect the clinic's current fees. Changes are saved in this browser.</p>
+            <form id="price-form" class="price-form">
+              <div class="price-list" id="price-list"></div>
+              <div class="price-form-actions" id="price-form-actions" hidden>
+                <button class="cancel-btn" id="cancel-prices" type="button">Cancel</button>
+                <button class="primary-btn" type="submit">Save prices</button>
+              </div>
+              <p id="price-save-status" class="price-save-status" role="status" aria-live="polite"></p>
+            </form>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const priceStorageKey = "orilla-dental-service-prices-v1";
+      const services = [
+        { id: "tooth-removal", name: "Tooth removal", category: "General dentistry" },
+        { id: "tooth-cleaning", name: "Tooth cleaning", category: "General dentistry" },
+        { id: "check-up", name: "Dental check-up", category: "General dentistry" },
+        { id: "braces-metal", name: "Metal braces", category: "Braces" },
+        { id: "braces-ceramic", name: "Ceramic braces", category: "Braces" },
+        { id: "braces-self-ligating", name: "Self-ligating braces", category: "Braces" },
+        { id: "braces-lingual", name: "Lingual braces", category: "Braces" },
+        { id: "braces-clear-aligners", name: "Clear aligners", category: "Braces" },
+      ];
+      const form = document.querySelector("#price-form");
+      const priceList = document.querySelector("#price-list");
+      const editPricesButton = document.querySelector("#edit-prices");
+      const priceFormActions = document.querySelector("#price-form-actions");
+      let prices = loadPrices();
+      let editing = false;
+
+      function loadPrices() {
+        try {
+          const saved = localStorage.getItem(priceStorageKey);
+          const parsed = saved ? JSON.parse(saved) : {};
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            throw new TypeError("Saved service prices must be an object.");
+          }
+          return parsed;
+        } catch (error) {
+          console.error("Could not load service prices:", error);
+          document.querySelector("#price-save-status").textContent =
+            "Saved prices could not be loaded. You can still enter prices and save them.";
+          return {};
+        }
+      }
+
+      function renderPrices() {
+        priceList.replaceChildren();
+        let currentCategory = "";
+
+        services.forEach((service) => {
+          if (service.category !== currentCategory) {
+            currentCategory = service.category;
+            const heading = document.createElement("h2");
+            heading.className = "price-category-title";
+            heading.textContent = currentCategory;
+            priceList.append(heading);
+          }
+
+          const row = document.createElement("div");
+          row.className = "price-service-row";
+          const description = document.createElement("div");
+          description.className = "price-service-description";
+          const name = document.createElement("strong");
+          name.textContent = service.name;
+          const price = prices[service.id];
+          const value = document.createElement("span");
+          value.className = "price-value";
+          value.textContent = typeof price === "number" && Number.isFinite(price)
+            ? new Intl.NumberFormat(undefined, { style: "currency", currency: "PHP" }).format(price)
+            : "Price not set";
+          description.append(name, value);
+
+          const inputLabel = document.createElement("label");
+          inputLabel.className = "price-input-label";
+          inputLabel.htmlFor = `price-${service.id}`;
+          inputLabel.textContent = "Price (PHP)";
+          const input = document.createElement("input");
+          input.id = `price-${service.id}`;
+          input.name = service.id;
+          input.type = "number";
+          input.min = "0";
+          input.step = "0.01";
+          input.placeholder = "Enter price";
+          input.value = typeof price === "number" && Number.isFinite(price) ? String(price) : "";
+          input.disabled = !editing;
+          inputLabel.append(input);
+          row.append(description, inputLabel);
+          priceList.append(row);
+        });
+      }
+
+      function setEditing(nextEditing) {
+        editing = nextEditing;
+        renderPrices();
+        priceFormActions.hidden = !editing;
+        editPricesButton.hidden = editing;
+      }
+
+      editPricesButton.addEventListener("click", () => {
+        document.querySelector("#price-save-status").textContent = "";
+        setEditing(true);
+        document.querySelector("#price-list input").focus();
+      });
+
+      document.querySelector("#cancel-prices").addEventListener("click", () => {
+        prices = loadPrices();
+        setEditing(false);
+        document.querySelector("#price-save-status").textContent = "Changes cancelled.";
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!editing) return;
+
+        const nextPrices = {};
+        for (const service of services) {
+          const rawAmount = form.elements[service.id].value.trim();
+          if (rawAmount === "") continue;
+          const amount = Number(rawAmount);
+          if (!Number.isFinite(amount) || amount < 0) {
+            form.elements[service.id].focus();
+            return;
+          }
+          nextPrices[service.id] = amount;
+        }
+
+        try {
+          localStorage.setItem(priceStorageKey, JSON.stringify(nextPrices));
+        } catch (error) {
+          console.error("Could not save service prices:", error);
+          document.querySelector("#price-save-status").textContent =
+            "Could not save prices in this browser. Please try again.";
+          return;
+        }
+
+        prices = nextPrices;
+        setEditing(false);
+        document.querySelector("#price-save-status").textContent = "Prices saved.";
+      });
+
+      renderPrices();
+    </script>
+  </body>
+</html>

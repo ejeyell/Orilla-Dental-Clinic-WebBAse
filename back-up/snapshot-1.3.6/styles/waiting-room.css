@@ -1,0 +1,50 @@
+:root {
+  font-family: Inter, "Segoe UI", Tahoma, sans-serif;
+  color: #f3fbfc;
+  background: #071824;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+body { min-width: 320px; min-height: 100vh; margin: 0; background: radial-gradient(ellipse at 50% -25%, #174b59 0%, #0b2634 42%, #071824 78%); }
+.display-board { width: min(1500px, 100%); min-height: 100vh; display: flex; flex-direction: column; margin: 0 auto; padding: clamp(24px, 5vw, 72px); }
+.display-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 26px; border-bottom: 1px solid rgba(214, 238, 241, .15); }
+.display-brand { display: flex; align-items: center; gap: 16px; }
+.display-brand img { width: 56px; height: 56px; object-fit: contain; border-radius: 50%; }
+.display-brand strong, .display-brand span { display: block; }
+.display-brand strong { color: #f3fbfc; font-size: clamp(.88rem, 1.4vw, 1.12rem); letter-spacing: .08em; }
+.display-brand span { margin-top: 5px; color: #94b8c1; font-size: clamp(.68rem, 1vw, .8rem); letter-spacing: .14em; }
+.display-date { color: #a6c3c9; font-size: clamp(.85rem, 1.25vw, 1rem); text-align: right; }
+.calling-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 44px 16px; text-align: center; }
+.display-label { display: flex; align-items: center; gap: 12px; margin: 0; color: #75d8c2; font-size: clamp(.85rem, 1.5vw, 1.12rem); font-weight: 800; letter-spacing: .22em; }
+.pulse-dot { width: 11px; height: 11px; border-radius: 50%; background: #40d9b4; box-shadow: 0 0 0 7px rgba(64, 217, 180, .12), 0 0 22px rgba(64, 217, 180, .65); }
+.calling-panel h1 { max-width: 100%; margin: 28px 0 14px; color: #fff; font-size: clamp(3.1rem, 8.5vw, 8.25rem); font-weight: 750; letter-spacing: -.055em; line-height: 1.02; overflow-wrap: anywhere; }
+.display-prompt { margin: 0; color: #a6c3c9; font-size: clamp(1rem, 1.8vw, 1.45rem); }
+.next-panel { display: flex; align-items: center; gap: clamp(16px, 3vw, 34px); padding: clamp(20px, 3.5vw, 40px); border: 1px solid rgba(182, 221, 225, .17); border-radius: 22px; background: rgba(21, 57, 68, .78); box-shadow: 0 22px 65px rgba(0, 0, 0, .15); }
+.next-icon { flex: 0 0 auto; width: clamp(48px, 6vw, 76px); height: clamp(48px, 6vw, 76px); display: grid; place-items: center; border-radius: 18px; background: rgba(69, 182, 164, .15); color: #75d8c2; font-size: clamp(1.8rem, 3vw, 2.6rem); }
+.next-panel .display-label { color: #8eb1b8; font-size: clamp(.7rem, 1.1vw, .85rem); }
+.next-panel h2 { margin: 10px 0 0; color: #f0f8f9; font-size: clamp(1.6rem, 4.4vw, 4rem); font-weight: 650; letter-spacing: -.035em; overflow-wrap: anywhere; }
+.next-number { margin-left: auto; color: #6ba7a8; font-size: .78rem; font-weight: 800; letter-spacing: .15em; }
+.display-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 24px; color: #7f9fa7; font-size: clamp(.72rem, 1vw, .82rem); }
+.display-footer p { margin: 0; }
+.display-footer button { min-height: 40px; border: 1px solid rgba(207, 234, 237, .24); border-radius: 8px; padding: 8px 13px; background: rgba(255, 255, 255, .06); color: #cde3e6; font: inherit; cursor: pointer; }
+.display-footer button:hover { background: rgba(255, 255, 255, .12); }
+.display-footer button:focus-visible { outline: 3px solid #75d8c2; outline-offset: 2px; }
+
+@media (max-width: 650px) {
+  .display-board { padding: 20px; }
+  .display-header { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .display-date { text-align: left; }
+  .calling-panel { min-height: 40vh; padding: 28px 0; }
+  .calling-panel h1 { font-size: clamp(2.75rem, 14vw, 5rem); }
+  .next-panel { gap: 14px; padding: 18px; border-radius: 15px; }
+  .display-footer { align-items: flex-start; flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pulse-dot { animation: calling-pulse 1.9s ease-in-out infinite; }
+  @keyframes calling-pulse { 50% { box-shadow: 0 0 0 11px rgba(64, 217, 180, .05), 0 0 28px rgba(64, 217, 180, .75); } }
+}
+

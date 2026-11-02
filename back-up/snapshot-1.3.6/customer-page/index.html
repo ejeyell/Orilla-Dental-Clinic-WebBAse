@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f5fafb" />
+    <title>Request an Appointment | Orilla Dental Clinic</title>
+    <link rel="stylesheet" href="customer.css" />
+  </head>
+  <body>
+    <header class="customer-header">
+      <a class="clinic-brand" href="index.html" aria-label="Orilla Dental Clinic home">
+        <img class="brand-mark" src="dental-icon.svg" alt="" />
+        <span class="brand-name"><strong class="brand-text">ORILLA DENTAL</strong><strong class="brand-sub">CLINIC</strong><small class="doctor-name">Dr. Raul A. Orilla</small></span>
+      </a>
+      <div class="header-actions">
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark mode" title="Switch color theme">
+          <img src="theme-toggle-icon.svg" alt="" />
+        </button>
+      </div>
+    </header>
+
+    <main class="customer-layout">
+      <section class="welcome-panel">
+        <p class="eyebrow">YOUR SMILE, OUR CARE</p>
+        <h1>Request an appointment</h1>
+        <p class="intro">Tell us what you need and when you would like to visit. Our clinic team will contact you to confirm an available schedule.</p>
+        <div class="clinic-availability is-open" id="clinic-availability" role="status" aria-live="polite">
+          <span class="availability-dot" aria-hidden="true"></span>
+          <div><strong id="clinic-availability-title">Clinic is open</strong><p id="clinic-availability-message">You may send an appointment request. Our team will contact you to confirm your schedule.</p></div>
+        </div>
+        <div class="request-note">
+          <span class="note-icon" aria-hidden="true">i</span>
+          <p><strong>This is an appointment request.</strong> Your visit is not booked until our team confirms the date and time with you.</p>
+        </div>
+        <div class="contact-hint">
+          <span aria-hidden="true">⌖</span>
+          <p><strong>Orilla Dental Clinic</strong><br />We’ll use your contact details only to follow up about this request.</p>
+        </div>
+      </section>
+
+      <section class="form-card" aria-labelledby="form-heading">
+        <div class="form-card-heading">
+          <div>
+            <p class="eyebrow">ONLINE BOOKING</p>
+            <h2 id="form-heading">Appointment details</h2>
+          </div>
+          <span class="secure-badge">Request form</span>
+        </div>
+        <iframe
+          class="appointment-form"
+          title="Orilla Dental Clinic appointment request form"
+          src="appointment-form.html">
+          <p>Your browser cannot display the form. <a href="appointment-form.html">Open the appointment request form</a>.</p>
+        </iframe>
+      </section>
+    </main>
+
+    <footer class="customer-footer">© Orilla Dental Clinic <span>•</span> Appointment requests are subject to confirmation.</footer>
+    <script>
+      const themeKey = "orilla-dental-theme";
+      const clinicStatusKey = "orilla-dental-clinic-status";
+      const themeToggle = document.querySelector("#theme-toggle");
+      const availability = document.querySelector("#clinic-availability");
+      const availabilityTitle = document.querySelector("#clinic-availability-title");
+      const availabilityMessage = document.querySelector("#clinic-availability-message");
+      function applyClinicStatus(status) {
+        const isOpen = status !== "closed";
+        availability.classList.toggle("is-open", isOpen);
+        availability.classList.toggle("is-closed", !isOpen);
+        availabilityTitle.textContent = isOpen ? "Clinic is open" : "Clinic is currently closed";
+        availabilityMessage.textContent = isOpen
+          ? "You may send an appointment request. Our team will contact you to confirm your schedule."
+          : "You may still send a request. Our team will follow up when the clinic is open.";
+      }
+      let savedClinicStatus = "open";
+      try { savedClinicStatus = localStorage.getItem(clinicStatusKey) || "open"; } catch (error) { /* Default to open. */ }
+      applyClinicStatus(savedClinicStatus);
+      window.addEventListener("storage", (event) => {
+        if (event.key === clinicStatusKey) applyClinicStatus(event.newValue || "open");
+      });
+      function applyTheme(theme, save = true) {
+        const selectedTheme = theme === "dark" ? "dark" : "light";
+        document.documentElement.dataset.theme = selectedTheme;
+        themeToggle.setAttribute("aria-label", `Switch to ${selectedTheme === "dark" ? "light" : "dark"} mode`);
+        themeToggle.setAttribute("aria-pressed", String(selectedTheme === "dark"));
+        if (save) {
+          try { localStorage.setItem(themeKey, selectedTheme); }
+          catch (error) { console.warn("Could not save the appearance preference:", error); }
+        }
+      }
+      let savedTheme = "light";
+      try { savedTheme = localStorage.getItem(themeKey) || "light"; } catch (error) { /* Keep the default theme. */ }
+      applyTheme(savedTheme, false);
+      themeToggle.addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
+    </script>
+  </body>
+</html>

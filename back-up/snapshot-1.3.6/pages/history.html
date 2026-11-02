@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Patient History | Orilla Dental Clinic</title>
+    <script src="../scripts/auth.js"></script>
+    <script src="../scripts/history-log.js"></script>
+    <link rel="stylesheet" href="../styles/styles.css" />
+    <script src="../scripts/nav-state.js" defer></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <div class="dashboard">
+        <aside class="sidebar">
+          <div class="brand-block">
+            <img class="brand-mark" src="../asset/image/icon/dental-icon.png" alt="" />
+            <div class="brand-name">
+              <span class="brand-text">ORILLA DENTAL</span>
+              <span class="brand-sub">CLINIC</span>
+            </div>
+            <div class="doctor-name">Dr. Raul A. Orilla</div>
+          </div>
+
+          <nav class="nav-menu" aria-label="Sidebar navigation">
+            <details class="nav-group">
+              <summary class="nav-group-title">Appointments</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="index.html">Today's Appointments</a>
+                <a class="nav-item" href="all-appointments.html">All Appointments</a>
+                <a class="nav-item request-nav-item" href="requests.html">Online Requests <span class="nav-count" data-pending-request-count hidden>0</span></a>
+              </div>
+            </details>
+            <details class="nav-group" open>
+              <summary class="nav-group-title">Clinic Management</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="price-offer.html">Price Offer</a>
+                <a class="nav-item" href="loan-customers.html">Loan Customer</a>
+                <a class="nav-item active" href="history.html" aria-current="page">History</a>
+              </div>
+            </details>
+            <details class="nav-group">
+              <summary class="nav-group-title">System</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="controls.html">Controls</a>
+                <a class="nav-item" href="settings.html">Settings</a>
+              </div>
+            </details>
+            <div class="nav-footer"><button class="nav-item logout-nav" type="button" data-logout>Log out</button></div>
+          </nav>
+
+          <div class="sidebar-spacer" aria-hidden="true"></div>
+        </aside>
+
+        <main class="main-panel history-main">
+          <header class="all-appointments-header">
+            <div>
+              <h1>Patient History</h1>
+              <p>Appointments, loans, and payment activity</p>
+            </div>
+            <a class="primary-btn back-to-day-btn" href="index.html">Today's List</a>
+          </header>
+
+          <section class="history-content" aria-live="polite">
+            <div class="history-toolbar">
+              <label for="history-search">Search patient history</label>
+              <input id="history-search" type="search" placeholder="Name, contact, details, or date" autocomplete="off" />
+              <label class="history-type-label" for="history-type">Activity</label>
+              <select id="history-type">
+                <option value="all">All activity</option>
+                <option value="appointment">Appointments</option>
+                <option value="loan">Loans</option>
+                <option value="payment">Payments</option>
+              </select>
+              <span id="history-count"></span>
+            </div>
+            <div class="table-scroll history-table-scroll">
+              <table class="appointments-table history-table">
+                <thead>
+                  <tr>
+                    <th>Date / Time</th>
+                    <th>Type</th>
+                    <th>Patient</th>
+                    <th>Contact No.</th>
+                    <th>Activity / Service</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="history-list"></tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const appointmentStorageKey = "orilla-dental-appointments-v1";
+      const loanStorageKey = "orilla-dental-loan-customers-v1";
+      const historyList = document.querySelector("#history-list");
+      const searchInput = document.querySelector("#history-search");
+      const typeFilter = document.querySelector("#history-type");
+
+      function loadRecords(key, label, isValid) {
+        try {
+          const saved = localStorage.getItem(key);
+          if (!saved) return [];
+          const parsed = JSON.parse(saved);
+          if (!Array.isArray(parsed)) throw new TypeError(`Saved ${label} must be a list.`);
+          return parsed.filter(isValid);
+        } catch (error) {
+          console.error(`Could not load ${label}:`, error);
+          return null;
+        }
+      }
+
+      function formatDate(dateString) {
+        const [year, month, day] = dateString.split("-").map(Number);
+        return new Intl.DateTimeFormat(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        }).format(new Date(year, month - 1, day));
+      }
+
+      function formatTime(timeString) {
+        if (!/^\d{2}:\d{2}$/.test(timeString || "")) return "Not recorded";
+        const [hours, minutes] = timeString.split(":").map(Number);
+        return new Intl.DateTimeFormat(undefined, {
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(new Date(2000, 0, 1, hours, minutes));
+      }
+
+      function formatDateTime(dateString) {
+        const date = new Date(dateString);
+        if (Number.isNaN(date.getTime())) return "Not recorded";
+        return new Intl.DateTimeFormat(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(date);
+      }
+
+      function formatCurrency(amount) {
+        return new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency: "PHP",
+        }).format(amount);
+      }
+
+      function appendCell(row, text) {
+        const cell = document.createElement("td");
+        cell.textContent = text;
+        row.append(cell);
+        return cell;
+      }
+
+      function getHistoryRows() {
+        const appointments = loadRecords(
+          appointmentStorageKey,
+          "appointments",
+          (item) => item && typeof item.name === "string" && typeof item.date === "string" &&
+            /^\d{4}-\d{2}-\d{2}$/.test(item.date)
+        );
+        const loans = loadRecords(
+          loanStorageKey,
+          "loan customers",
+          (item) => item && typeof item.name === "string" && typeof item.service === "string" &&
+            typeof item.date === "string" && Number.isFinite(Number(item.amount)) &&
+            Number.isFinite(Number(item.paid))
+        );
+        const events = window.clinicHistory.read();
+        if (appointments === null || loans === null || events === null) return null;
+
+        const rows = [
+          ...appointments.map((appointment) => ({
+            eventType: "appointment",
+            action: "Appointment",
+            patientName: appointment.name,
+            contact: appointment.contact || "",
+            details: `${appointment.reason || "Appointment"}${appointment.time ? ` · ${formatTime(appointment.time)}` : ""}`,
+            amount: null,
+            occurredAt: appointment.date,
+            displayDate: `${formatDate(appointment.date)}${appointment.time ? ` · ${formatTime(appointment.time)}` : ""}`,
+            status: appointment.done ? "Finished" : appointment.notHere ? "Not here" : "Scheduled",
+            appointmentId: appointment.id,
+            appointmentDate: appointment.date,
+          })),
+          ...loans.map((loan) => ({
+            eventType: "loan",
+            action: "Loan record",
+            patientName: loan.name,
+            contact: loan.contact || "",
+            details: `${loan.service} · Paid ${formatCurrency(Number(loan.paid))} · Balance ${formatCurrency(Math.max(0, Number(loan.amount) - Number(loan.paid)))}`,
+            amount: Number(loan.amount),
+            occurredAt: loan.date,
+            displayDate: formatDate(loan.date),
+            status: "Active loan",
+          })),
+          ...events
+            .filter((entry) => entry.action !== "Loan added" && !(
+              entry.eventType === "appointment" &&
+              entry.action === "Appointment scheduled" &&
+              appointments.some((appointment) => appointment.id === entry.appointmentId)
+            ))
+            .map((entry) => ({
+              ...entry,
+              status: entry.action,
+            })),
+        ];
+        return rows;
+      }
+
+      function renderHistory() {
+        historyList.replaceChildren();
+        const rows = getHistoryRows();
+        if (rows === null) {
+          const row = document.createElement("tr");
+          const cell = appendCell(row, "History could not be loaded from this browser. Check the browser console for details.");
+          cell.colSpan = 7;
+          cell.className = "empty-list";
+          historyList.append(row);
+          document.querySelector("#history-count").textContent = "";
+          return;
+        }
+
+        const query = searchInput.value.trim().toLocaleLowerCase();
+        const selectedType = typeFilter.value;
+        const filtered = rows
+          .filter((entry) => {
+            const searchable = [
+              entry.patientName,
+              entry.contact,
+              entry.details,
+              entry.action,
+              entry.eventType,
+              entry.occurredAt,
+              formatDateTime(entry.occurredAt),
+            ].join(" ").toLocaleLowerCase();
+            return (selectedType === "all" || entry.eventType === selectedType) &&
+              searchable.includes(query);
+          })
+          .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
+
+        document.querySelector("#history-count").textContent =
+          `${filtered.length} ${filtered.length === 1 ? "activity" : "activities"}`;
+
+        if (filtered.length === 0) {
+          const row = document.createElement("tr");
+          const cell = appendCell(row, query || selectedType !== "all"
+            ? "No history matches these filters."
+            : "No patient history is available yet.");
+          cell.colSpan = 7;
+          cell.className = "empty-list";
+          historyList.append(row);
+          return;
+        }
+
+        filtered.forEach((entry) => {
+          const row = document.createElement("tr");
+          appendCell(row, entry.displayDate || formatDateTime(entry.occurredAt));
+          appendCell(row, entry.eventType === "appointment"
+            ? "Appointment"
+            : entry.eventType === "payment" ? "Payment" : "Loan");
+          appendCell(row, entry.patientName);
+          appendCell(row, entry.contact || "—");
+          appendCell(row, `${entry.action}${entry.details ? ` · ${entry.details}` : ""}`);
+          appendCell(row, Number.isFinite(Number(entry.amount)) && entry.amount !== null
+            ? formatCurrency(Number(entry.amount))
+            : "—");
+          const statusCell = document.createElement("td");
+          statusCell.textContent = entry.status || "Recorded";
+          if (entry.eventType === "appointment" && entry.action === "Appointment" && entry.appointmentId) {
+            const link = document.createElement("a");
+            link.className = "history-open-link";
+            link.href = `index.html?date=${encodeURIComponent(entry.appointmentDate)}&edit=${encodeURIComponent(entry.appointmentId)}`;
+            link.textContent = "Open";
+            link.setAttribute("aria-label", `Open ${entry.patientName}'s appointment`);
+            statusCell.append(document.createElement("br"), link);
+          }
+          row.append(statusCell);
+          historyList.append(row);
+        });
+      }
+
+      searchInput.addEventListener("input", renderHistory);
+      typeFilter.addEventListener("change", renderHistory);
+      renderHistory();
+    </script>
+  </body>
+</html>

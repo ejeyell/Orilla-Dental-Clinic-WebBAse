@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Online Requests | Orilla Dental Clinic</title>
+    <script src="../scripts/auth.js"></script>
+    <script src="../scripts/history-log.js"></script>
+    <link rel="stylesheet" href="../styles/styles.css" />
+    <script src="../scripts/nav-state.js" defer></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <div class="dashboard">
+        <aside class="sidebar">
+          <div class="brand-block">
+            <img class="brand-mark" src="../asset/image/icon/dental-icon.png" alt="" />
+            <div class="brand-name"><span class="brand-text">ORILLA DENTAL</span><span class="brand-sub">CLINIC</span></div>
+            <div class="doctor-name">Dr. Raul A. Orilla</div>
+          </div>
+          <nav class="nav-menu" aria-label="Sidebar navigation">
+            <details class="nav-group" open>
+              <summary class="nav-group-title">Appointments</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="index.html">Today's Appointments</a>
+                <a class="nav-item" href="all-appointments.html">All Appointments</a>
+                <a class="nav-item request-nav-item active" href="requests.html" aria-current="page">Online Requests <span class="nav-count" data-pending-request-count hidden>0</span></a>
+              </div>
+            </details>
+            <details class="nav-group">
+              <summary class="nav-group-title">Clinic Management</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="price-offer.html">Price Offer</a>
+                <a class="nav-item" href="loan-customers.html">Loan Customer</a>
+                <a class="nav-item" href="history.html">History</a>
+              </div>
+            </details>
+            <details class="nav-group">
+              <summary class="nav-group-title">System</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="controls.html">Controls</a>
+                <a class="nav-item" href="settings.html">Settings</a>
+              </div>
+            </details>
+            <div class="nav-footer"><button class="nav-item logout-nav" type="button" data-logout>Log out</button></div>
+          </nav>
+        </aside>
+
+        <main class="main-panel requests-main">
+          <header class="all-appointments-header">
+            <div>
+              <h1>Online appointment requests</h1>
+              <p>Review customer requests, then confirm or decline the preferred schedule.</p>
+            </div>
+          </header>
+          <section class="requests-panel" aria-label="Online appointment requests">
+            <div class="requests-toolbar">
+              <div class="request-view-tabs" role="group" aria-label="Request status filter">
+                <button type="button" class="request-view-tab is-selected" data-request-view="pending" aria-pressed="true">Pending <span id="pending-request-total">0</span></button>
+                <button type="button" class="request-view-tab" data-request-view="resolved" aria-pressed="false">Resolved <span id="resolved-request-total">0</span></button>
+              </div>
+              <p class="requests-helper">New requests appear here automatically when submitted from the customer page.</p>
+            </div>
+            <div class="request-list" id="request-list" aria-live="polite"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const storageKey = "orilla-dental-appointments-v1";
+      const requestList = document.querySelector("#request-list");
+      let activeView = "pending";
+
+      function loadAppointments() {
+        try {
+          const value = JSON.parse(localStorage.getItem(storageKey) || "[]");
+          return Array.isArray(value) ? value : [];
+        } catch (error) {
+          console.error("Could not load online appointment requests:", error);
+          return [];
+        }
+      }
+
+      function saveAppointments(appointments) {
+        localStorage.setItem(storageKey, JSON.stringify(appointments));
+        window.refreshPendingRequestBadges?.();
+      }
+
+      function formatDate(dateString) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString || "")) return "Date not recorded";
+        const [year, month, day] = dateString.split("-").map(Number);
+        return new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+          .format(new Date(year, month - 1, day));
+      }
+
+      function formatTime(timeString) {
+        if (!/^\d{2}:\d{2}$/.test(timeString || "")) return "Time not recorded";
+        const [hour, minute] = timeString.split(":").map(Number);
+        return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(2000, 0, 1, hour, minute));
+      }
+
+      function renderRequest(request) {
+        const card = document.createElement("article");
+        card.className = "online-request-card";
+        const main = document.createElement("div");
+        main.className = "online-request-main";
+        const heading = document.createElement("div");
+        heading.className = "online-request-heading";
+        const name = document.createElement("h2");
+        name.textContent = request.name || "Name not provided";
+        const status = document.createElement("span");
+        const requestStatus = request.requestStatus || "pending";
+        status.className = `request-status-tag status-${requestStatus}`;
+        status.textContent = requestStatus === "pending" ? "Pending review" : requestStatus === "confirmed" ? "Confirmed" : "Declined";
+        heading.append(name, status);
+
+        const details = document.createElement("div");
+        details.className = "online-request-details";
+        [
+          ["Contact", request.contact || "Not provided"],
+          ["Reason", request.reason || "Not provided"],
+          ["Preferred date", formatDate(request.date)],
+          ["Preferred time", formatTime(request.time)],
+          ["Submitted", request.submittedAt ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(request.submittedAt)) : "Submission time unavailable"],
+        ].forEach(([label, value]) => {
+          const item = document.createElement("p");
+          const key = document.createElement("strong");
+          key.textContent = `${label}: `;
+          item.append(key, document.createTextNode(value));
+          details.append(item);
+        });
+        main.append(heading, details);
+
+        const actions = document.createElement("div");
+        actions.className = "online-request-actions";
+        if (requestStatus === "pending") {
+          const confirmButton = document.createElement("button");
+          confirmButton.type = "button";
+          confirmButton.className = "request-confirm-btn";
+          confirmButton.dataset.action = "confirm";
+          confirmButton.dataset.id = request.id;
+          confirmButton.textContent = "Confirm request";
+          const declineButton = document.createElement("button");
+          declineButton.type = "button";
+          declineButton.className = "request-decline-btn";
+          declineButton.dataset.action = "decline";
+          declineButton.dataset.id = request.id;
+          declineButton.textContent = "Decline";
+          actions.append(confirmButton, declineButton);
+        } else {
+          const reopenButton = document.createElement("button");
+          reopenButton.type = "button";
+          reopenButton.className = "request-reopen-btn";
+          reopenButton.dataset.action = "reopen";
+          reopenButton.dataset.id = request.id;
+          reopenButton.textContent = "Reopen request";
+          actions.append(reopenButton);
+        }
+        card.append(main, actions);
+        return card;
+      }
+
+      function renderRequests() {
+        const requests = loadAppointments().filter((item) => item && item.requested);
+        const pending = requests.filter((item) => (item.requestStatus || "pending") === "pending");
+        const resolved = requests.filter((item) => ["confirmed", "declined"].includes(item.requestStatus));
+        document.querySelector("#pending-request-total").textContent = String(pending.length);
+        document.querySelector("#resolved-request-total").textContent = String(resolved.length);
+        requestList.replaceChildren();
+        const visible = activeView === "pending" ? pending : resolved;
+        if (!visible.length) {
+          const empty = document.createElement("p");
+          empty.className = "requests-empty";
+          empty.textContent = activeView === "pending" ? "No pending online requests." : "No resolved requests yet.";
+          requestList.append(empty);
+          return;
+        }
+        visible.sort((a, b) => (b.submittedAt || "").localeCompare(a.submittedAt || ""));
+        visible.forEach((request) => requestList.append(renderRequest(request)));
+      }
+
+      document.querySelectorAll("[data-request-view]").forEach((button) => {
+        button.addEventListener("click", () => {
+          activeView = button.dataset.requestView;
+          document.querySelectorAll("[data-request-view]").forEach((tab) => {
+            const selected = tab === button;
+            tab.classList.toggle("is-selected", selected);
+            tab.setAttribute("aria-pressed", String(selected));
+          });
+          renderRequests();
+        });
+      });
+
+      requestList.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-action]");
+        if (!button) return;
+        const appointments = loadAppointments();
+        const request = appointments.find((item) => item.id === button.dataset.id && item.requested);
+        if (!request) return;
+        const oldStatus = request.requestStatus || "pending";
+        const newStatus = button.dataset.action === "confirm" ? "confirmed"
+          : button.dataset.action === "decline" ? "declined" : "pending";
+        request.requestStatus = newStatus;
+        request.requestStatusUpdatedAt = new Date().toISOString();
+        saveAppointments(appointments);
+        window.clinicHistory?.record({
+          eventType: "appointment",
+          action: newStatus === "confirmed" ? "Online appointment request confirmed"
+            : newStatus === "declined" ? "Online appointment request declined"
+              : "Online appointment request reopened",
+          patientName: request.name || "Customer",
+          contact: request.contact || "",
+          details: `${request.reason || "Appointment request"} · Preferred ${request.date || "date not provided"}${request.time ? ` at ${request.time}` : ""} · Status: ${oldStatus} → ${newStatus}`,
+          appointmentId: request.id,
+          appointmentDate: request.date || "",
+        });
+        renderRequests();
+      });
+
+      window.addEventListener("storage", (event) => {
+        if (event.key === storageKey) renderRequests();
+      });
+      renderRequests();
+    </script>
+  </body>
+</html>

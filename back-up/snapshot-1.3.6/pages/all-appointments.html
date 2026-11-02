@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>All Appointments | Orilla Dental Clinic</title>
+    <script src="../scripts/auth.js"></script>
+    <link rel="stylesheet" href="../styles/styles.css" />
+    <script src="../scripts/nav-state.js" defer></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <div class="dashboard">
+        <aside class="sidebar">
+          <div class="brand-block">
+            <img class="brand-mark" src="../asset/image/icon/dental-icon.png" alt="" />
+            <div class="brand-name">
+              <span class="brand-text">ORILLA DENTAL</span>
+              <span class="brand-sub">CLINIC</span>
+            </div>
+            <div class="doctor-name">Dr. Raul A. Orilla</div>
+          </div>
+
+          <nav class="nav-menu" aria-label="Sidebar navigation">
+            <details class="nav-group" open>
+              <summary class="nav-group-title">Appointments</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="index.html">Today's Appointments</a>
+                <a class="nav-item active" href="all-appointments.html" aria-current="page">All Appointments</a>
+                <a class="nav-item request-nav-item" href="requests.html">Online Requests <span class="nav-count" data-pending-request-count hidden>0</span></a>
+              </div>
+            </details>
+            <details class="nav-group">
+              <summary class="nav-group-title">Clinic Management</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="price-offer.html">Price Offer</a>
+                <a class="nav-item" href="loan-customers.html">Loan Customer</a>
+                <a class="nav-item" href="history.html">History</a>
+              </div>
+            </details>
+            <details class="nav-group">
+              <summary class="nav-group-title">System</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="controls.html">Controls</a>
+                <a class="nav-item" href="settings.html">Settings</a>
+              </div>
+            </details>
+            <div class="nav-footer"><button class="nav-item logout-nav" type="button" data-logout>Log out</button></div>
+          </nav>
+
+          <div class="sidebar-spacer" aria-hidden="true"></div>
+        </aside>
+
+        <main class="main-panel all-appointments-main">
+          <header class="all-appointments-header">
+            <div>
+              <h1>All Appointments</h1>
+              <p>Today's, upcoming, and previous appointments</p>
+            </div>
+            <a class="primary-btn back-to-day-btn" id="today-link" href="index.html">Today's List</a>
+          </header>
+
+          <section class="all-appointments-content" aria-live="polite">
+            <div class="all-appointments-filters" role="search" aria-label="Filter appointments">
+              <label>
+                Search appointments
+                <input id="appointment-search" type="search" placeholder="Patient name, contact, or reason" autocomplete="off" />
+              </label>
+              <label>
+                Period
+                <select id="appointment-period">
+                  <option value="all">All periods</option>
+                  <option value="today">Today</option>
+                  <option value="upcoming">Upcoming</option>
+                  <option value="previous">Previous</option>
+                </select>
+              </label>
+              <label>
+                Reason / service
+                <select id="appointment-reason">
+                  <option value="">All reasons</option>
+                </select>
+              </label>
+              <label>
+                Status
+                <select id="appointment-status-filter">
+                  <option value="all">All statuses</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="not-here">Not here</option>
+                  <option value="finished">Finished</option>
+                  <option value="pending-request">Pending request</option>
+                  <option value="declined-request">Declined request</option>
+                </select>
+              </label>
+              <span id="appointment-filter-count" aria-live="polite"></span>
+            </div>
+            <section class="appointment-group" id="today-group" aria-labelledby="today-heading">
+              <h2 id="today-heading">Today's appointments <span id="today-count"></span></h2>
+              <div class="appointment-group-list" id="today-appointments"></div>
+            </section>
+
+            <section class="appointment-group" id="upcoming-group" aria-labelledby="upcoming-heading">
+              <h2 id="upcoming-heading">Upcoming appointments <span id="upcoming-count"></span></h2>
+              <div class="appointment-group-list" id="upcoming-appointments"></div>
+            </section>
+
+            <section class="appointment-group" id="previous-group" aria-labelledby="previous-heading">
+              <h2 id="previous-heading">Previous appointments <span id="previous-count"></span></h2>
+              <div class="appointment-group-list" id="previous-appointments"></div>
+            </section>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const storageKey = "orilla-dental-appointments-v1";
+      const localDate = (() => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      })();
+      document.querySelector("#today-link").href = `index.html?date=${encodeURIComponent(localDate)}`;
+
+      function loadAppointments() {
+        try {
+          const saved = localStorage.getItem(storageKey);
+          if (!saved) return [];
+          const appointments = JSON.parse(saved);
+          if (!Array.isArray(appointments)) {
+            throw new TypeError("Saved appointments must be a list.");
+          }
+          return appointments.filter((appointment) =>
+            appointment &&
+            typeof appointment.name === "string" &&
+            typeof appointment.date === "string" &&
+            /^\d{4}-\d{2}-\d{2}$/.test(appointment.date)
+          );
+        } catch (error) {
+          console.error("Could not load saved appointments:", error);
+          return [];
+        }
+      }
+
+      function formatDate(dateString) {
+        const [year, month, day] = dateString.split("-").map(Number);
+        return new Intl.DateTimeFormat(undefined, {
+          weekday: "short",
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        }).format(new Date(year, month - 1, day));
+      }
+
+      function formatTime(timeString) {
+        if (!/^\d{2}:\d{2}$/.test(timeString || "")) return "Time not recorded";
+        const [hours, minutes] = timeString.split(":").map(Number);
+        return new Intl.DateTimeFormat(undefined, {
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(new Date(2000, 0, 1, hours, minutes));
+      }
+
+      function createAppointmentCard(appointment) {
+        const card = document.createElement("article");
+        card.className = "all-appointment-card";
+
+        const details = document.createElement("div");
+        details.className = "all-appointment-details";
+        const name = document.createElement("strong");
+        name.textContent = appointment.name;
+        const meta = document.createElement("span");
+        meta.textContent = [appointment.contact, appointment.reason].filter(Boolean).join(" · ");
+        details.append(name, meta);
+
+        const status = document.createElement("span");
+        status.className = "appointment-status";
+        const requestStatus = appointment.requestStatus || (appointment.requested ? "pending" : "");
+        status.textContent = appointment.requested && requestStatus === "pending" ? "Pending request"
+          : appointment.requested && requestStatus === "declined" ? "Request declined"
+            : appointment.done ? "Finished"
+              : appointment.requested && requestStatus === "confirmed" ? "Request confirmed"
+                : appointment.notHere ? "Not here" : "Scheduled";
+        if (appointment.requested && requestStatus === "pending") status.classList.add("status-request-pending");
+        else if (appointment.requested && requestStatus === "declined") status.classList.add("status-request-declined");
+        else if (appointment.done) status.classList.add("status-finished");
+        else if (appointment.requested && requestStatus === "confirmed") status.classList.add("status-request-confirmed");
+        else if (appointment.notHere) status.classList.add("status-not-here");
+
+        const dateLink = document.createElement("a");
+        dateLink.className = "appointment-date-link";
+        dateLink.href = `index.html?date=${encodeURIComponent(appointment.date)}`;
+        dateLink.textContent = "Open day";
+        dateLink.setAttribute("aria-label", `Open appointments for ${formatDate(appointment.date)}`);
+
+        const editLink = document.createElement("a");
+        editLink.className = "all-appointment-edit-btn";
+        editLink.href = `index.html?date=${encodeURIComponent(appointment.date)}&edit=${encodeURIComponent(appointment.id)}`;
+        editLink.textContent = "Edit appointment";
+        editLink.setAttribute("aria-label", `Edit appointment for ${appointment.name}`);
+
+        const date = document.createElement("time");
+        date.dateTime = appointment.date;
+        date.textContent = `${formatDate(appointment.date)} · ${formatTime(appointment.time)}`;
+
+        const side = document.createElement("div");
+        side.className = "all-appointment-side";
+        side.append(date, status, editLink, dateLink);
+        card.append(details, side);
+        return card;
+      }
+
+      function renderGroup(containerId, countId, appointments, emptyMessage) {
+        const container = document.querySelector(`#${containerId}`);
+        container.replaceChildren();
+        document.querySelector(`#${countId}`).textContent = `(${appointments.length})`;
+        if (appointments.length === 0) {
+          const empty = document.createElement("p");
+          empty.className = "all-appointments-empty";
+          empty.textContent = emptyMessage;
+          container.append(empty);
+          return;
+        }
+        appointments.forEach((appointment) => container.append(createAppointmentCard(appointment)));
+      }
+
+      function renderAppointments() {
+        const searchTerm = document.querySelector("#appointment-search").value.trim().toLocaleLowerCase();
+        const selectedPeriod = document.querySelector("#appointment-period").value;
+        const selectedStatus = document.querySelector("#appointment-status-filter").value;
+        const reasonFilter = document.querySelector("#appointment-reason");
+        const selectedReason = reasonFilter.value;
+        const appointments = loadAppointments();
+        const reasons = [...new Map(
+          appointments
+            .map((appointment) => (appointment.reason || "").trim())
+            .filter(Boolean)
+            .map((reason) => [reason.toLocaleLowerCase(), reason])
+        ).values()].sort((a, b) => a.localeCompare(b));
+        reasonFilter.replaceChildren(new Option("All reasons", ""));
+        reasons.forEach((reason) => reasonFilter.add(new Option(reason, reason)));
+        reasonFilter.value = reasons.some((reason) => reason.toLocaleLowerCase() === selectedReason.toLocaleLowerCase())
+          ? selectedReason
+          : "";
+        const filtered = appointments.filter((appointment) => {
+          const period = appointment.date === localDate
+            ? "today"
+            : appointment.date > localDate ? "upcoming" : "previous";
+          const requestStatus = appointment.requestStatus || (appointment.requested ? "pending" : "");
+          const status = appointment.requested && requestStatus === "pending" ? "pending-request"
+            : appointment.requested && requestStatus === "declined" ? "declined-request"
+              : appointment.done ? "finished" : appointment.notHere ? "not-here" : "scheduled";
+          const searchable = [
+            appointment.name,
+            appointment.contact,
+            appointment.reason,
+            appointment.date,
+            formatDate(appointment.date),
+            formatTime(appointment.time),
+          ].join(" ").toLocaleLowerCase();
+          return (selectedPeriod === "all" || period === selectedPeriod) &&
+            (selectedStatus === "all" || status === selectedStatus) &&
+            (!reasonFilter.value || (appointment.reason || "").trim().toLocaleLowerCase() === reasonFilter.value.toLocaleLowerCase()) &&
+            (!searchTerm || searchable.includes(searchTerm));
+        });
+        const today = filtered
+          .filter((appointment) => appointment.date === localDate)
+          .sort((a, b) => Number(a.done) - Number(b.done));
+        const upcoming = filtered
+          .filter((appointment) => appointment.date > localDate)
+          .sort((a, b) => a.date.localeCompare(b.date) || Number(a.done) - Number(b.done));
+        const previous = filtered
+          .filter((appointment) => appointment.date < localDate)
+          .sort((a, b) => b.date.localeCompare(a.date) || Number(a.done) - Number(b.done));
+
+        document.querySelector("#today-group").hidden = selectedPeriod !== "all" && selectedPeriod !== "today";
+        document.querySelector("#upcoming-group").hidden = selectedPeriod !== "all" && selectedPeriod !== "upcoming";
+        document.querySelector("#previous-group").hidden = selectedPeriod !== "all" && selectedPeriod !== "previous";
+        const emptyMessage = searchTerm || selectedStatus !== "all"
+          ? "No appointments match these filters."
+          : null;
+        renderGroup("today-appointments", "today-count", today, emptyMessage || "No appointments scheduled for today.");
+        renderGroup("upcoming-appointments", "upcoming-count", upcoming, emptyMessage || "No upcoming appointments.");
+        renderGroup("previous-appointments", "previous-count", previous, emptyMessage || "No previous appointments.");
+        document.querySelector("#appointment-filter-count").textContent =
+          `${filtered.length} ${filtered.length === 1 ? "appointment" : "appointments"} shown`;
+      }
+
+      document.querySelector("#appointment-search").addEventListener("input", renderAppointments);
+      document.querySelector("#appointment-period").addEventListener("change", renderAppointments);
+      document.querySelector("#appointment-reason").addEventListener("change", renderAppointments);
+      document.querySelector("#appointment-status-filter").addEventListener("change", renderAppointments);
+      renderAppointments();
+    </script>
+  </body>
+</html>

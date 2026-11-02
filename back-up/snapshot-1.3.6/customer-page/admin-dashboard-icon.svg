@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Admin dashboard clinic logo</title>
+  <circle cx="36" cy="36" r="34.5" fill="#F5F9FF" stroke="#0A6DBC" stroke-width="3"/>
+  <circle cx="36" cy="36" r="31.5" stroke="#06599E" stroke-opacity=".2" stroke-width="2"/>
+  <ellipse cx="27" cy="32" rx="9" ry="7" fill="#fff" stroke="#0D5FA3" stroke-width="2"/>
+  <ellipse cx="45" cy="32" rx="9" ry="7" fill="#fff" stroke="#0D5FA3" stroke-width="2"/>
+  <path d="M22 44h28v13H22z" fill="#fff"/>
+  <path d="M23 44h9v15h-9c-2 0-3-2-3-4V48c0-2 2-4 4-4Zm17 0h9c2 0 4 2 4 4v7c0 2-1 4-3 4h-10V44Z" fill="#fff" stroke="#0A6DBC" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M31 44v13m10-13v13" stroke="#D0E7FF" stroke-width="2"/>
+</svg>

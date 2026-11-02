@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Loan Customers | Orilla Dental Clinic</title>
+    <script src="../scripts/auth.js"></script>
+    <script src="../scripts/history-log.js"></script>
+    <link rel="stylesheet" href="../styles/styles.css" />
+    <script src="../scripts/nav-state.js" defer></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <div class="dashboard">
+        <aside class="sidebar">
+          <div class="brand-block">
+            <img class="brand-mark" src="../asset/image/icon/dental-icon.png" alt="" />
+            <div class="brand-name">
+              <span class="brand-text">ORILLA DENTAL</span>
+              <span class="brand-sub">CLINIC</span>
+            </div>
+            <div class="doctor-name">Dr. Raul A. Orilla</div>
+          </div>
+
+          <nav class="nav-menu" aria-label="Sidebar navigation">
+            <details class="nav-group">
+              <summary class="nav-group-title">Appointments</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="index.html">Today's Appointments</a>
+                <a class="nav-item" href="all-appointments.html">All Appointments</a>
+                <a class="nav-item request-nav-item" href="requests.html">Online Requests <span class="nav-count" data-pending-request-count hidden>0</span></a>
+              </div>
+            </details>
+            <details class="nav-group" open>
+              <summary class="nav-group-title">Clinic Management</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="price-offer.html">Price Offer</a>
+                <a class="nav-item active" href="loan-customers.html" aria-current="page">Loan Customer</a>
+                <a class="nav-item" href="history.html">History</a>
+              </div>
+            </details>
+            <details class="nav-group">
+              <summary class="nav-group-title">System</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="controls.html">Controls</a>
+                <a class="nav-item" href="settings.html">Settings</a>
+              </div>
+            </details>
+            <div class="nav-footer"><button class="nav-item logout-nav" type="button" data-logout>Log out</button></div>
+          </nav>
+          <div class="sidebar-spacer" aria-hidden="true"></div>
+        </aside>
+
+        <main class="main-panel loan-main">
+          <header class="all-appointments-header">
+            <div>
+              <h1>Loan Customers</h1>
+              <p>Manage patients with a balance for clinic services</p>
+            </div>
+            <button class="primary-btn" id="add-loan" type="button">Add loan customer</button>
+          </header>
+
+          <section class="loan-content">
+            <div class="loan-summary" aria-live="polite">
+              <span id="loan-count">0 customers</span>
+              <span id="loan-total">Outstanding balance: ₱0.00</span>
+            </div>
+            <div class="loan-filters" role="search" aria-label="Filter loan customers">
+              <label>
+                Search patients
+                <input id="loan-search" type="search" placeholder="Search by patient name" autocomplete="off" />
+              </label>
+              <label>
+                Service type
+                <select id="loan-service-filter">
+                  <option value="">All services</option>
+                </select>
+              </label>
+            </div>
+            <div class="table-scroll loan-table-scroll">
+              <table class="appointments-table loan-table">
+                <thead>
+                  <tr>
+                    <th>Patient</th>
+                    <th>Contact No.</th>
+                    <th>Service</th>
+                    <th>Loan Amount</th>
+                    <th>Amount Paid</th>
+                    <th>Balance</th>
+                    <th>Loan Date</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="loan-list"></tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <dialog class="appointment-dialog" id="loan-dialog" aria-labelledby="loan-dialog-title">
+      <form id="loan-form">
+        <div class="dialog-heading">
+          <h2 id="loan-dialog-title">Add loan customer</h2>
+          <button class="dialog-close" id="close-loan-dialog" type="button" aria-label="Close dialog">×</button>
+        </div>
+        <label>
+          Patient name
+          <input name="name" type="text" required maxlength="100" autocomplete="name" />
+        </label>
+        <label>
+          Contact number
+          <input name="contact" type="tel" required maxlength="30" autocomplete="tel" />
+        </label>
+        <label>
+          Service
+          <input name="service" type="text" required maxlength="100" placeholder="e.g. Tooth removal, braces" />
+        </label>
+        <label>
+          Loan amount (PHP)
+          <input name="amount" type="number" required min="0.01" step="0.01" />
+        </label>
+        <label>
+          Total amount paid (PHP)
+          <input name="paid" type="number" required min="0" step="0.01" value="0" />
+        </label>
+        <label id="quick-payment-field" hidden>
+          Add payment (PHP)
+          <input name="quickPayment" type="number" min="0" step="0.01" value="0" />
+          <small>Added to the current amount paid when you save.</small>
+        </label>
+        <label>
+          Loan date
+          <input name="date" type="date" required />
+        </label>
+        <p class="loan-form-error" id="loan-form-error" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="cancel-btn" id="cancel-loan" type="button">Cancel</button>
+          <button class="primary-btn" type="submit">Save customer</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script>
+      const storageKey = "orilla-dental-loan-customers-v1";
+      const list = document.querySelector("#loan-list");
+      const dialog = document.querySelector("#loan-dialog");
+      const form = document.querySelector("#loan-form");
+      const searchInput = document.querySelector("#loan-search");
+      const serviceFilter = document.querySelector("#loan-service-filter");
+      let loans = loadLoans();
+      let editingId = null;
+
+      function loadLoans() {
+        try {
+          const saved = localStorage.getItem(storageKey);
+          const parsed = saved ? JSON.parse(saved) : [];
+          if (!Array.isArray(parsed)) throw new TypeError("Saved loan customers must be a list.");
+          return parsed.filter((loan) =>
+            loan &&
+            typeof loan.id === "string" &&
+            typeof loan.name === "string" &&
+            typeof loan.service === "string" &&
+            Number.isFinite(Number(loan.amount)) &&
+            Number.isFinite(Number(loan.paid)) &&
+            typeof loan.date === "string"
+          );
+        } catch (error) {
+          console.error("Could not load loan customers:", error);
+          return [];
+        }
+      }
+
+      function saveLoans() {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(loans));
+          return true;
+        } catch (error) {
+          console.error("Could not save loan customers:", error);
+          alert("Loan customer information could not be saved in this browser.");
+          return false;
+        }
+      }
+
+      function formatCurrency(amount) {
+        return new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency: "PHP",
+        }).format(amount);
+      }
+
+      function formatDate(dateString) {
+        const [year, month, day] = dateString.split("-").map(Number);
+        return new Intl.DateTimeFormat(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        }).format(new Date(year, month - 1, day));
+      }
+
+      function renderLoans() {
+        list.replaceChildren();
+        const selectedService = serviceFilter.value;
+        const services = [...new Map(
+          loans
+            .map((loan) => loan.service.trim())
+            .filter(Boolean)
+            .map((service) => [service.toLocaleLowerCase(), service])
+        ).values()].sort((a, b) => a.localeCompare(b));
+        serviceFilter.replaceChildren(new Option("All services", ""));
+        services.forEach((service) => serviceFilter.add(new Option(service, service)));
+        serviceFilter.value = services.some((service) => service === selectedService) ? selectedService : "";
+
+        const searchTerm = searchInput.value.trim().toLocaleLowerCase();
+        const sortedLoans = [...loans].sort((a, b) =>
+          b.date.localeCompare(a.date) || a.name.localeCompare(b.name)
+        );
+        const filteredLoans = sortedLoans.filter((loan) =>
+          (!searchTerm || loan.name.toLocaleLowerCase().includes(searchTerm)) &&
+          (!serviceFilter.value || loan.service.trim().toLocaleLowerCase() === serviceFilter.value.toLocaleLowerCase())
+        );
+
+        filteredLoans.forEach((loan) => {
+          const row = document.createElement("tr");
+          const balance = Math.max(0, Number(loan.amount) - Number(loan.paid));
+          const values = [
+            loan.name,
+            loan.contact || "—",
+            loan.service,
+            formatCurrency(Number(loan.amount)),
+            formatCurrency(Number(loan.paid)),
+            formatCurrency(balance),
+            formatDate(loan.date),
+          ];
+          values.forEach((value) => {
+            const cell = document.createElement("td");
+            cell.textContent = value;
+            row.append(cell);
+          });
+          const actionCell = document.createElement("td");
+          actionCell.className = "action-cell";
+          const editButton = document.createElement("button");
+          editButton.type = "button";
+          editButton.className = "edit-btn";
+          editButton.textContent = "Edit";
+          editButton.setAttribute("aria-label", `Edit loan for ${loan.name}`);
+          editButton.dataset.loanId = loan.id;
+          actionCell.append(editButton);
+          row.append(actionCell);
+          list.append(row);
+        });
+
+        if (filteredLoans.length === 0) {
+          const row = document.createElement("tr");
+          const cell = document.createElement("td");
+          cell.colSpan = 8;
+          cell.className = "empty-list";
+          cell.textContent = loans.length === 0
+            ? "No loan customers have been added yet."
+            : "No patients match these filters.";
+          row.append(cell);
+          list.append(row);
+        }
+
+        const outstandingBalance = loans.reduce(
+          (total, loan) => total + Math.max(0, Number(loan.amount) - Number(loan.paid)),
+          0
+        );
+        document.querySelector("#loan-count").textContent =
+          `${filteredLoans.length} ${filteredLoans.length === 1 ? "customer" : "customers"} shown`;
+        document.querySelector("#loan-total").textContent =
+          `Outstanding balance: ${formatCurrency(outstandingBalance)}`;
+      }
+
+      function openLoanForm(loan = null) {
+        editingId = loan ? loan.id : null;
+        form.reset();
+        form.elements.name.value = loan ? loan.name : "";
+        form.elements.contact.value = loan ? loan.contact : "";
+        form.elements.service.value = loan ? loan.service : "";
+        form.elements.amount.value = loan ? loan.amount : "";
+        form.elements.paid.value = loan ? loan.paid : "0";
+        form.elements.quickPayment.value = "0";
+        document.querySelector("#quick-payment-field").hidden = !loan;
+        const today = new Date();
+        const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+        form.elements.date.value = loan ? loan.date : localDate;
+        document.querySelector("#loan-form-error").hidden = true;
+        document.querySelector("#loan-dialog-title").textContent =
+          loan ? "Edit loan customer" : "Add loan customer";
+        form.querySelector('[type="submit"]').textContent =
+          loan ? "Save changes" : "Save customer";
+        dialog.showModal();
+        form.elements.name.focus();
+      }
+
+      document.querySelector("#add-loan").addEventListener("click", () => openLoanForm());
+      searchInput.addEventListener("input", renderLoans);
+      serviceFilter.addEventListener("change", renderLoans);
+      document.querySelector("#close-loan-dialog").addEventListener("click", () => dialog.close());
+      document.querySelector("#cancel-loan").addEventListener("click", () => dialog.close());
+      dialog.addEventListener("click", (event) => {
+        if (event.target === dialog) dialog.close();
+      });
+
+      list.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-loan-id]");
+        if (!button) return;
+        const loan = loans.find((item) => item.id === button.dataset.loanId);
+        if (loan) openLoanForm(loan);
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const data = new FormData(form);
+        const amount = Number(data.get("amount"));
+        const currentPaid = Number(data.get("paid"));
+        const quickPayment = editingId ? Number(data.get("quickPayment")) : 0;
+        const paid = currentPaid + quickPayment;
+        const errorMessage = document.querySelector("#loan-form-error");
+        if (
+          !Number.isFinite(amount) ||
+          amount <= 0 ||
+          !Number.isFinite(currentPaid) ||
+          currentPaid < 0 ||
+          !Number.isFinite(quickPayment) ||
+          quickPayment < 0 ||
+          paid > amount
+        ) {
+          errorMessage.textContent = "Enter a positive loan amount and make sure the current total plus any new payment does not exceed the loan amount.";
+          errorMessage.hidden = false;
+          return;
+        }
+
+        const details = {
+          name: data.get("name").trim(),
+          contact: data.get("contact").trim(),
+          service: data.get("service").trim(),
+          amount,
+          paid,
+          date: data.get("date"),
+        };
+        const previousLoans = loans;
+        const previousLoan = editingId ? loans.find((loan) => loan.id === editingId) : null;
+        const loanId = editingId || crypto.randomUUID();
+        loans = editingId
+          ? loans.map((loan) => loan.id === editingId ? { ...loan, ...details } : loan)
+          : [...loans, { ...details, id: loanId }];
+
+        if (!saveLoans()) {
+          loans = previousLoans;
+          return;
+        }
+        if (!previousLoan) {
+          window.clinicHistory.record({
+            eventType: "loan",
+            action: "Loan added",
+            patientName: details.name,
+            contact: details.contact,
+            details: `${details.service} · Loan amount ${formatCurrency(amount)} · Balance ${formatCurrency(amount - paid)}`,
+            amount,
+            loanId,
+          });
+        } else if (
+          previousLoan.amount !== amount ||
+          previousLoan.service !== details.service ||
+          previousLoan.date !== details.date ||
+          previousLoan.name !== details.name ||
+          previousLoan.contact !== details.contact ||
+          (paid < Number(previousLoan.paid))
+        ) {
+          window.clinicHistory.record({
+            eventType: "loan",
+            action: "Loan details updated",
+            patientName: details.name,
+            contact: details.contact,
+            details: `${details.service} · Loan amount ${formatCurrency(amount)} · Balance ${formatCurrency(amount - paid)}`,
+            amount,
+            loanId,
+          });
+        }
+        const paymentAmount = previousLoan ? paid - Number(previousLoan.paid) : paid;
+        if (paymentAmount > 0) {
+          window.clinicHistory.record({
+            eventType: "payment",
+            action: "Payment received",
+            patientName: details.name,
+            contact: details.contact,
+            details: `${details.service} · Loan balance ${formatCurrency(amount - paid)}`,
+            amount: paymentAmount,
+            loanId,
+          });
+        }
+        renderLoans();
+        dialog.close();
+      });
+
+      renderLoans();
+    </script>
+  </body>
+</html>

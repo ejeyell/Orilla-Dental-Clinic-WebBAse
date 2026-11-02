@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Controls | Orilla Dental Clinic</title>
+    <script src="../scripts/auth.js"></script>
+    <link rel="stylesheet" href="../styles/styles.css" />
+    <script src="../scripts/nav-state.js" defer></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <div class="dashboard">
+        <aside class="sidebar">
+          <div class="brand-block">
+            <img class="brand-mark" src="../asset/image/icon/dental-icon.png" alt="" />
+            <div class="brand-name">
+              <span class="brand-text">ORILLA DENTAL</span>
+              <span class="brand-sub">CLINIC</span>
+            </div>
+            <div class="doctor-name">Dr. Raul A. Orilla</div>
+          </div>
+
+          <nav class="nav-menu" aria-label="Sidebar navigation">
+            <details class="nav-group">
+              <summary class="nav-group-title">Appointments</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="index.html">Today's Appointments</a>
+                <a class="nav-item" href="all-appointments.html">All Appointments</a>
+                <a class="nav-item request-nav-item" href="requests.html">Online Requests <span class="nav-count" data-pending-request-count hidden>0</span></a>
+              </div>
+            </details>
+            <details class="nav-group">
+              <summary class="nav-group-title">Clinic Management</summary>
+              <div class="nav-group-items">
+                <a class="nav-item" href="price-offer.html">Price Offer</a>
+                <a class="nav-item" href="loan-customers.html">Loan Customer</a>
+                <a class="nav-item" href="history.html">History</a>
+              </div>
+            </details>
+            <details class="nav-group" open>
+              <summary class="nav-group-title">System</summary>
+              <div class="nav-group-items">
+                <a class="nav-item active" href="controls.html" aria-current="page">Controls</a>
+                <a class="nav-item" href="settings.html">Settings</a>
+              </div>
+            </details>
+            <div class="nav-footer"><button class="nav-item logout-nav" type="button" data-logout>Log out</button></div>
+          </nav>
+        </aside>
+
+        <main class="main-panel controls-main">
+          <header class="all-appointments-header">
+            <div>
+              <h1>Controls</h1>
+              <p>Manage clinic availability and the waiting-room display.</p>
+            </div>
+          </header>
+
+          <section class="settings-card clinic-status-card" aria-labelledby="clinic-status-heading">
+            <div class="accessibility-heading">
+              <div>
+                <h2 id="clinic-status-heading">Clinic availability</h2>
+                <p class="settings-note">Set whether the clinic is currently open. Customers will see this status on the appointment page.</p>
+              </div>
+              <span class="availability-icon" aria-hidden="true">●</span>
+            </div>
+            <div class="clinic-status-options" role="group" aria-label="Clinic availability status">
+              <button type="button" class="clinic-status-option is-open" data-clinic-status-option="open" aria-pressed="false">Open</button>
+              <button type="button" class="clinic-status-option is-closed" data-clinic-status-option="closed" aria-pressed="false">Closed</button>
+            </div>
+            <p class="clinic-status-feedback" id="clinic-status-feedback" role="status" aria-live="polite"></p>
+          </section>
+
+          <section class="settings-card waiting-room-control" aria-labelledby="waiting-room-control-heading">
+            <div class="accessibility-heading">
+              <div>
+                <h2 id="waiting-room-control-heading">Waiting-room display</h2>
+              <p class="settings-note">Call patients in today's appointment order. The display shows the current call and the next three patients.</p>
+              </div>
+              <span class="display-icon" aria-hidden="true">▣</span>
+            </div>
+            <div class="waiting-room-preview" aria-live="polite">
+              <div><span>NOW CALLING</span><strong id="current-call-name">No patient called</strong></div>
+              <div><span>NEXT 3</span><ol class="waiting-room-next-list" id="next-call-list"><li>No one waiting</li></ol></div>
+            </div>
+            <p class="waiting-room-control-note" id="waiting-room-control-note">Today's active appointments will appear in the calling queue. Pending online requests are excluded until confirmed.</p>
+            <div class="waiting-room-actions">
+              <button class="primary-btn" id="call-next-patient" type="button">Call next patient</button>
+              <button class="request-reopen-btn" id="reset-call-queue" type="button">Reset call queue</button>
+              <a class="display-open-btn" href="waiting-room-display.html" target="_blank" rel="noopener">Open screen display ↗</a>
+            </div>
+            <p class="display-setup-note">For a TV or HDMI monitor, open the display on that screen and choose Full screen. You can also mirror the browser through your computer’s display settings.</p>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script>
+      const clinicStatusKey = "orilla-dental-clinic-status";
+      const clinicStatusOptions = [...document.querySelectorAll("[data-clinic-status-option]")];
+      const clinicStatusFeedback = document.querySelector("#clinic-status-feedback");
+      function setClinicStatus(status, save = true) {
+        const selectedStatus = status === "closed" ? "closed" : "open";
+        clinicStatusOptions.forEach((option) => {
+          option.setAttribute("aria-pressed", String(option.dataset.clinicStatusOption === selectedStatus));
+        });
+        clinicStatusFeedback.textContent = selectedStatus === "open"
+          ? "Clinic status is Open. The customer appointment page will show that the clinic is open."
+          : "Clinic status is Closed. The customer appointment page will show that the clinic is closed.";
+        clinicStatusFeedback.dataset.status = selectedStatus;
+        if (save) {
+          try { localStorage.setItem(clinicStatusKey, selectedStatus); }
+          catch (error) { console.warn("Could not save clinic availability:", error); }
+        }
+      }
+      clinicStatusOptions.forEach((option) => option.addEventListener("click", () => setClinicStatus(option.dataset.clinicStatusOption)));
+      let savedClinicStatus = "open";
+      try { savedClinicStatus = localStorage.getItem(clinicStatusKey) || "open"; } catch (error) { /* Default to open. */ }
+      setClinicStatus(savedClinicStatus, false);
+      window.addEventListener("storage", (event) => {
+        if (event.key === clinicStatusKey) setClinicStatus(event.newValue || "open", false);
+      });
+
+      const appointmentsStorageKey = "orilla-dental-appointments-v1";
+      const displayStateKey = "orilla-dental-waiting-room-v1";
+      const today = new Date();
+      const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      const currentCallName = document.querySelector("#current-call-name");
+      const callNote = document.querySelector("#waiting-room-control-note");
+
+      function getCallQueue() {
+        try {
+          const appointments = JSON.parse(localStorage.getItem(appointmentsStorageKey) || "[]");
+          if (!Array.isArray(appointments)) return [];
+          return appointments.filter((item) =>
+            item && item.id && item.date === todayString && !item.done && !item.notHere &&
+            (!item.requested || item.requestStatus === "confirmed")
+          );
+        } catch (error) {
+          console.error("Could not load today's calling queue:", error);
+          return [];
+        }
+      }
+
+      function getDisplayState() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(displayStateKey) || "{}");
+          return saved && saved.date === todayString ? saved : { date: todayString, currentId: null, calledIds: [] };
+        } catch (error) {
+          return { date: todayString, currentId: null, calledIds: [] };
+        }
+      }
+
+      function renderCallPreview() {
+        const queue = getCallQueue();
+        const state = getDisplayState();
+        const current = queue.find((item) => item.id === state.currentId);
+        const calledIds = new Set(state.calledIds || []);
+        const next = queue.filter((item) => !calledIds.has(item.id)).slice(0, 3);
+        currentCallName.textContent = current ? current.name : "No patient called";
+        const nextCallList = document.querySelector("#next-call-list");
+        nextCallList.replaceChildren();
+        if (next.length) {
+          next.forEach((item) => {
+            const name = document.createElement("li");
+            name.textContent = item.name;
+            nextCallList.append(name);
+          });
+        } else {
+          const empty = document.createElement("li");
+          empty.textContent = "No one waiting";
+          nextCallList.append(empty);
+        }
+        callNote.textContent = queue.length
+          ? `${queue.length} active appointment${queue.length === 1 ? "" : "s"} in today's queue. Pending online requests are excluded until confirmed.`
+          : "There are no active appointments in today's calling queue.";
+      }
+
+      document.querySelector("#call-next-patient").addEventListener("click", () => {
+        const queue = getCallQueue();
+        const state = getDisplayState();
+        const calledIds = new Set(state.calledIds || []);
+        const next = queue.find((item) => !calledIds.has(item.id));
+        if (!next) {
+          callNote.textContent = "Everyone in today's active queue has been called. Reset the queue to start again.";
+          return;
+        }
+        calledIds.add(next.id);
+        localStorage.setItem(displayStateKey, JSON.stringify({ date: todayString, currentId: next.id, calledIds: [...calledIds] }));
+        renderCallPreview();
+      });
+
+      document.querySelector("#reset-call-queue").addEventListener("click", () => {
+        if (!window.confirm("Reset today's waiting-room call queue?")) return;
+        localStorage.setItem(displayStateKey, JSON.stringify({ date: todayString, currentId: null, calledIds: [] }));
+        renderCallPreview();
+      });
+
+      window.addEventListener("storage", (event) => {
+        if (event.key === appointmentsStorageKey || event.key === displayStateKey) renderCallPreview();
+      });
+      renderCallPreview();
+    </script>
+  </body>
+</html>
